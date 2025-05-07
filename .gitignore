@@ -151,5 +151,5 @@ dmypy.json
 .pytype/
 
 # Project specifics
-.xlsx
-.csv
+*.xlsx
+*.csv
