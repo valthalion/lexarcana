@@ -1,7 +1,6 @@
 from __future__ import annotations
-from typing import Dict
 
-from definitions import Array, RollCount, RollSpec
+from definitions import Array, DIFFICULTY_TARGETS, RollName
 from patterns import *
 from rolls import *
 
@@ -12,20 +11,31 @@ __all__ = [
 ]
 
 
-JSONSummary = Dict
+def roll_spec_stats(roll_spec: Array) -> RollsTable:
+    """
+    Return a dictionary of statistics for the given roll specification
 
+    The dictionary contains:
+    -   'name': the string version of the roll specification (e.g. '1d6')
+    -   'success_probs_fate': A dictionary of (difficulty target, success
+        probability) pairs, rolling with Fate
+    -   'success_probs_no_fate': A dictionary of (difficulty target, success
+        probability) pairs, rolling without Fate
+    -   'fate_probability': the probability of a Fate roll
+    -   'average_fate': the average roll result with Fate
+    -   'average_n_fate': the average roll result without Fate
+    """
 
-def roll_spec_stats(roll_spec: Array) -> JSONSummary:
     roll_counts = rolls(roll_spec)
     stats = {}
-    stats['name'] = spec_to_str(array_to_spec(roll_spec))
+    stats['name'] = spec_to_str(roll_spec)
     stats['success_probs_fate'] = {
         difficulty_target: success_probability(roll_counts, target=difficulty_target, fate=True)
-        for difficulty_target in range(3, 22, 3)  # 3, 6, ..., 18, 21
+        for difficulty_target in DIFFICULTY_TARGETS
     }
     stats['success_probs_no_fate'] = {
         difficulty_target: success_probability(roll_counts, target=difficulty_target, fate=False)
-        for difficulty_target in range(3, 22, 3)  # 3, 6, ..., 18, 21
+        for difficulty_target in DIFFICULTY_TARGETS
     }
     stats['fate_probability'] = fate_probability(roll_counts)
     stats['average_fate'] = average_roll(roll_counts, fate=True)
@@ -33,16 +43,24 @@ def roll_spec_stats(roll_spec: Array) -> JSONSummary:
     return stats
 
 
-def dice_points_stats(dice_points: int) -> Dict[str, JSONSummary]:
+def dice_points_stats(dice_points: int) -> dd[RollName, StatsTable]:
+    """
+    Return a dictionary of statistics for the given Dice Points value
+
+    The dictionary has as keys the string representations of the possible rolls
+    with the given Dice Points, and as values the corresponding statistics
+    dictionary (see `roll_spec_stats` for details).
+    """
+
     all_stats = {}
-    dice = (20, 12, 10, 8, 6, 5, 4, 3)
-    for roll_spec in build_patterns(dice, target=dice_points, maxlen=3):
+    for roll_spec in build_patterns(dice_points):
         stats = roll_spec_stats(roll_spec)
         all_stats[stats['name']] = stats
     return all_stats
 
 
 def main():
+    # Simple test
     dice_points = 11
     for stats in dice_points_stats(11).values():
         print('Name:', stats['name'])
