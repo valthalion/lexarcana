@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from definitions import Array, DIFFICULTY_TARGETS, RollName
+from typing import Dict
+
+from definitions import Array, DIFFICULTY_TARGETS, StatsTable
 from patterns import *
 from rolls import *
-
 
 __all__ = [
     'dice_points_stats',
@@ -11,7 +12,7 @@ __all__ = [
 ]
 
 
-def roll_spec_stats(roll_spec: Array) -> RollsTable:
+def roll_spec_stats(roll_spec: Array) -> StatsTable:
     """
     Return a dictionary of statistics for the given roll specification
 
@@ -27,23 +28,24 @@ def roll_spec_stats(roll_spec: Array) -> RollsTable:
     """
 
     roll_counts = rolls(roll_spec)
-    stats = {}
-    stats['name'] = spec_to_str(roll_spec)
-    stats['success_probs_fate'] = {
-        difficulty_target: success_probability(roll_counts, target=difficulty_target, fate=True)
-        for difficulty_target in DIFFICULTY_TARGETS
+    stats = {
+        'name': spec_to_str(roll_spec),
+        'success_probs_fate': {
+            difficulty_target: success_probability(roll_counts, target=difficulty_target, fate=True)
+            for difficulty_target in DIFFICULTY_TARGETS
+        },
+        'success_probs_no_fate': {
+            difficulty_target: success_probability(roll_counts, target=difficulty_target, fate=False)
+            for difficulty_target in DIFFICULTY_TARGETS
+        },
+        'fate_probability': fate_probability(roll_counts),
+        'average_fate': average_roll(roll_counts, fate=True),
+        'average_no_fate': average_roll(roll_counts, fate=False),
     }
-    stats['success_probs_no_fate'] = {
-        difficulty_target: success_probability(roll_counts, target=difficulty_target, fate=False)
-        for difficulty_target in DIFFICULTY_TARGETS
-    }
-    stats['fate_probability'] = fate_probability(roll_counts)
-    stats['average_fate'] = average_roll(roll_counts, fate=True)
-    stats['average_no_fate'] = average_roll(roll_counts, fate=False)
     return stats
 
 
-def dice_points_stats(dice_points: int) -> dd[RollName, StatsTable]:
+def dice_points_stats(dice_points: int) -> Dict[int, StatsTable]:
     """
     Return a dictionary of statistics for the given Dice Points value
 
@@ -64,7 +66,7 @@ def main():
     dice_points = 11
     for stats in dice_points_stats(11).values():
         print('Name:', stats['name'])
-        print('Succes Probabilities:')
+        print('Success Probabilities:')
         print('- with Fate:', ' | '.join(f'{diff:2} -> {prob:6.2%}' for diff, prob in stats['success_probs_fate'].items()))
         print('- with Fate:', ' | '.join(f'{diff:2} -> {prob:6.2%}' for diff, prob in stats['success_probs_no_fate'].items()))
         print(f"Fate probability: {stats['fate_probability']:6.2%}")

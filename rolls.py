@@ -1,6 +1,6 @@
 from __future__ import annotations
 from itertools import product
-from typing import Union
+from typing import Union, Optional
 
 from definitions import Array, RollCount, RollName, RollSpec
 
@@ -69,7 +69,7 @@ def success_probability(roll_counts: RollCount, target: int, fate: bool = True, 
     -   roll_counts: A RollCount specifying the possible results of the roll
     -   target: The Difficulty Target
     -   fate: whether the roll explodes on a Fate roll or not
-    -   fate_roll: the value of the Fate roll, if available; if ommitted, it is deduced from roll_counts
+    -   fate_roll: the value of the Fate roll, if available; if omitted, it is deduced from roll_counts
 
     Returns:
     -   The probability value
