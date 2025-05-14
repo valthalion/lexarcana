@@ -16,7 +16,8 @@ __all__ = [
 _score_functions = set()
 
 
-def score_function(score_fun):
+# Named after the decorate-order-undecorate pattern, not the Python decorators
+def decorated_score(score_fun):
     """Return (score, roll) instead of just score"""
     @wraps(score_fun)
     def decorated_score_fun(self, roll: RollName, fate: bool, **kwargs) -> Tuple[float, RollName]:
@@ -68,13 +69,13 @@ class Chooser:
 
     # Extend with different selection criteria by adding the corresponding score functions
     # All should receive the roll name and fate parameters, plus any additional keyword arguments as needed
-    @score_function
+    @decorated_score
     def success_probability(self, roll: RollName, fate: bool, *, difficulty: int) -> float:
         """Score on success probability"""
         prob_field = 'success_probs_fate' if fate else 'success_probs_no_fate'
         return self.stats[roll][prob_field][difficulty]
 
-    @score_function
+    @decorated_score
     def beat_roll(self, roll: RollName, fate: bool, *, roll_to_beat: RollName) -> float:
         """
         Score on likelihood to beat the other roll
