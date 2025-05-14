@@ -153,3 +153,5 @@ dmypy.json
 # Project specifics
 *.xlsx
 *.csv
+rolls.json
+stats.json
