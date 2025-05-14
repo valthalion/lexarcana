@@ -1,10 +1,14 @@
 from __future__ import annotations
-from typing import Tuple
+import json
+from typing import TYPE_CHECKING
 
-from definitions import DIFFICULTY_TARGETS, RollName, RollsTable, StatsTable
+from definitions import DIFFICULTY_TARGETS
 from patterns import build_patterns
-from probs import roll_spec_stats
-from rolls import array_to_spec, spec_to_str
+from roll_selection import Chooser
+from rolls import Roll, RollStats
+
+if TYPE_CHECKING:
+    from definitions import RollsTable, StatsTable
 
 
 def rolls_table(dice_points_range: range) -> RollsTable:
@@ -21,14 +25,10 @@ def rolls_table(dice_points_range: range) -> RollsTable:
     """
 
     table = {
-        dice_points: {
-            (roll_name := spec_to_str(roll_array)): {
-                'array': roll_array,
-                'name': roll_name,
-                'spec': array_to_spec(roll_array)
-            }
+        dice_points: [
+            Roll.from_array(roll_array)
             for roll_array in build_patterns(dice_points)
-        }
+        ]
         for dice_points in dice_points_range
     }
     return table
@@ -43,7 +43,7 @@ def stats_table(rolls: RollsTable) -> StatsTable:
 
     Returns:
     -   A dictionary in the format of a StatsTable covering all the rolls
-        included in the rolls table
+        included in the rolls table.
 
     These tables are separate to avoid repetition and can be cross-referenced
     using the roll name.
@@ -54,10 +54,10 @@ def stats_table(rolls: RollsTable) -> StatsTable:
 
     table = {}
     for roll_options in rolls.values():
-        for roll in roll_options.values():
-            if roll['name'] in table:
+        for roll in roll_options:
+            if roll.name in table:
                 continue
-            table[roll['name']] = roll_spec_stats(roll['array'])
+            table[roll.name] = RollStats.from_roll(roll).stats
     return table
 
 
@@ -69,7 +69,7 @@ def tables_to_csv(rolls: RollsTable, stats: StatsTable, filename: str) -> None:
         f.write(f'DP,Roll,Fate,Avg,"Fate Prob",{",".join(f"DT{diff}" for diff in DIFFICULTY_TARGETS)}\n')
         for dp, roll_options in rolls.items():  # Iterate over each Dice Points values and corresponding possible rolls
             for roll in roll_options:  # For each possible roll for the current Dice Points, write the statistics
-                roll_stats = stats[roll]
+                roll_stats = stats[roll.name]
                 # One line with Fate
                 success_probabilities = ','.join(str(prob) for prob in roll_stats['success_probs_fate'].values())
                 f.write(f'{dp},{roll},Y,{roll_stats["average_fate"]},{roll_stats["fate_probability"]},{success_probabilities}\n')
@@ -78,29 +78,18 @@ def tables_to_csv(rolls: RollsTable, stats: StatsTable, filename: str) -> None:
                 f.write(f'{dp},{roll},N,{roll_stats["average_no_fate"]},0,{success_probabilities}\n')
 
 
-def choose_best(dice_points: int, difficulty: int, fate: bool, rolls: RollsTable, stats: StatsTable) -> Tuple[RollName, float]:
-    """
-    Select the best roll for a given situation
+def tables_to_json(rolls: RollsTable, stats: StatsTable, rolls_filename: str, stats_filename: str) -> None:
+    """Write the information in the rolls and stats table into a csv file"""
 
-    Args:
-    -   dice_points: The Dice Points for the roll
-    -   difficulty: The Difficulty Target for the roll
-    -   fate: Whether Fate applies to the roll
-    -   rolls: The rolls table (see rolls_table)
-    -   stats: The stats table (see stats_table)
+    rolls_json = {
+        dp: [{'name': roll.name, 'spec': roll.spec, 'array': roll.array} for roll in roll_options]
+        for dp, roll_options in rolls.items()
+    }
+    with open(rolls_filename, 'w') as f:
+        json.dump(rolls_json, f)
 
-    Returns:
-    -   The name of the selected roll
-    -   Its probability of success
-    """
-
-    roll_options = rolls[dice_points]
-    prob_field = 'success_probs_fate' if fate else 'success_probs_no_fate'
-    # construct choices as (success probability, roll name) pairs; since tuple comparisons compare lexicographically,
-    # these pairs compare directly on success probability (and name for breaking ties)
-    choices = [(stats[roll][prob_field][difficulty], roll) for roll in roll_options]
-    best_prob, best_roll = max(choices)
-    return best_roll, best_prob
+    with open(stats_filename, 'w') as f:
+        json.dump(stats, f)
 
 
 def best_to_csv(rolls: RollsTable, stats: StatsTable, filename: str) -> None:
@@ -126,16 +115,17 @@ def best_to_csv(rolls: RollsTable, stats: StatsTable, filename: str) -> None:
     the future.
     """
 
+    chooser = Chooser(rolls, stats)
     with open(filename, 'w') as f:
         # write the header
         f.write(f'DP,DT,Fate,Roll,"Success Prob"\n')
         for dp in rolls:
             for dt in DIFFICULTY_TARGETS:
                 # TODO: Maybe consider a metric related to success level?
-                roll, prob = choose_best(dp, dt, fate=True, rolls=rolls, stats=stats)
+                roll, prob = chooser.choose_best('success_probability', dp, fate=True, difficulty=dt)
                 f.write(f'{dp},{dt},Y,{roll},{prob}\n')
                 # TODO: Resolve ties with lesser gap to success (min or avg?)
-                roll, prob = choose_best(dp, dt, fate=False, rolls=rolls, stats=stats)
+                roll, prob = chooser.choose_best('success_probability', dp, fate=False, difficulty=dt)
                 f.write(f'{dp},{dt},N,{roll},{prob}\n')
 
 
@@ -144,22 +134,10 @@ def main():
     rolls = rolls_table(range(3, 21))
     stats = stats_table(rolls)
 
-    # print('Rolls')
-    # for dp, r in rolls.items():
-    #     print(dp, '->', ', '.join(r))
-    # print()
-    # print('Stats')
-    # for r, s in stats.items():
-    #     print(r, '->', s)
-    # print()
-    # dp = 16
-    # print(f'Choose roll for DP{dp} at DT:')
-    # for diff in DIFFICULTY_TARGETS:
-    #     roll, prob = choose_best(dp, diff, fate=True, rolls=rolls, stats=stats)
-    #     print(f'{diff:2} -> [{prob:6.2%}] {roll}')
-
-    tables_to_csv(rolls, stats, 'lexarcana.csv')
+    tables_to_csv(rolls, stats, 'stats.csv')
     best_to_csv(rolls, stats, 'best.csv')
+
+    tables_to_json(rolls, stats, rolls_filename='rolls.json', stats_filename='stats.json')
 
 
 if __name__ == '__main__':

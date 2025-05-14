@@ -1,7 +1,12 @@
 from __future__ import annotations
-from typing import Iterable
+from typing import TYPE_CHECKING
 
-from definitions import Array, DICE, MAX_LEN
+from definitions import DICE, MAX_LEN
+
+if TYPE_CHECKING:
+    from typing import Iterable
+
+    from definitions import Array
 
 
 __all__ = [
