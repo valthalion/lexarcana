@@ -3,7 +3,7 @@ from functools import wraps
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from typing import Set, Tuple
+    from typing import List, Tuple
 
     from definitions import RollName, RollsTable, StatsTable
 
@@ -13,7 +13,7 @@ __all__ = [
 ]
 
 
-_score_functions = set()
+_score_functions = []
 
 
 # Named after the decorate-order-undecorate pattern, not the Python decorators
@@ -22,7 +22,7 @@ def decorated_score(score_fun):
     @wraps(score_fun)
     def decorated_score_fun(self, roll: RollName, fate: bool, **kwargs) -> Tuple[float, RollName]:
         return score_fun(self, roll, fate, **kwargs), roll
-    _score_functions.add(score_fun.__name__)
+    _score_functions.append(score_fun.__name__)
     return decorated_score_fun
 
 
@@ -42,7 +42,7 @@ class Chooser:
         self.stats = stats
 
     @property
-    def score_functions(self) -> Set[str]:
+    def score_functions(self) -> List[str]:
         return _score_functions
 
     def choose_best(self, score_function: str, dice_points: int, fate: bool, **kwargs) -> Tuple[RollName, float]:
