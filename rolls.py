@@ -68,7 +68,7 @@ class Roll:
         """Convert a RollName roll specification into a RollSpec"""
         count_die_pairs = (term.split('d') for term in name.split('+'))
         dice_counts = {int(die): int(count) for count, die in count_die_pairs}
-        return RollSpec(dice_counts)
+        return Counter(dice_counts)
 
     def __repr__(self):
         return f'Roll({self.name})'

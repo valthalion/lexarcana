@@ -9,6 +9,7 @@ from rolls import Roll, RollStats
 
 if TYPE_CHECKING:
     from definitions import RollsTable, StatsTable
+    from typing import Tuple
 
 
 def rolls_table(dice_points_range: range) -> RollsTable:
@@ -92,6 +93,29 @@ def tables_to_json(rolls: RollsTable, stats: StatsTable, rolls_filename: str, st
         json.dump(stats, f)
 
 
+def tables_from_json(rolls_filename: str, stats_filename: str) -> Tuple[RollsTable, StatsTable]:
+    """Read the information in the rolls and stats table from json files"""
+
+    with open(rolls_filename, 'r') as f:
+        rolls_json = json.load(f)
+    rolls = {int(dp): [Roll.from_name(roll['name']) for roll in roll_options] for dp, roll_options in rolls_json.items()}
+
+    with open(stats_filename, 'r') as f:
+        stats_json = json.load(f)
+    stats = {
+        roll: {
+            'success_probs_fate': {int(value): prob for value, prob in roll_stats['success_probs_fate'].items()},
+            'success_probs_no_fate': {int(value): prob for value, prob in roll_stats['success_probs_no_fate'].items()},
+            'fate_probability': roll_stats['fate_probability'],
+            'average_fate': roll_stats['average_fate'],
+            'average_no_fate': roll_stats['average_no_fate'],
+        }
+        for roll, roll_stats in stats_json.items()
+    }
+
+    return rolls, stats
+
+
 def best_to_csv(rolls: RollsTable, stats: StatsTable, filename: str) -> None:
     """
     Write the best roll option for each situation to a csv file
@@ -121,10 +145,8 @@ def best_to_csv(rolls: RollsTable, stats: StatsTable, filename: str) -> None:
         f.write(f'DP,DT,Fate,Roll,"Success Prob"\n')
         for dp in rolls:
             for dt in DIFFICULTY_TARGETS:
-                # TODO: Maybe consider a metric related to success level?
                 roll, prob = chooser.choose_best('success_probability', dp, fate=True, difficulty=dt)
                 f.write(f'{dp},{dt},Y,{roll},{prob}\n')
-                # TODO: Resolve ties with lesser gap to success (min or avg?)
                 roll, prob = chooser.choose_best('success_probability', dp, fate=False, difficulty=dt)
                 f.write(f'{dp},{dt},N,{roll},{prob}\n')
 
