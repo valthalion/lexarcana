@@ -84,10 +84,11 @@ class Chooser:
         the other roll; the weight is the probability of the other roll NOT
         beating that DT:
 
-            p[beat] = sum_{dt} p[roll_to_beat <= dt] * p[roll > dt]
+            p[beat] = sum_{dt} p[roll_to_beat == dt] * p[roll > dt]
 
         The probabilities in the roll stats are p[roll > dt], but we can
-        calculate p[roll <= dt] = 1 - p[roll > dt].
+        calculate p[roll <= dt] = 1 - p[roll > dt], and then p[roll == dt] =
+        p[roll <= dt] - p[roll <= dt - 1].
 
         This is an approximation (lower bound) with DTs in steps of size > 1,
         as e.g. with the standard DTs, a 7+ is needed to beat 4-6; i.e. beating
@@ -97,5 +98,11 @@ class Chooser:
         """
         prob_field = 'success_probs_fate' if fate else 'success_probs_no_fate'
         roll_probs = self.stats[roll][prob_field]
-        other_roll_probs = self.stats[roll_to_beat][prob_field]
-        return sum(rp * (1 - orp) for rp, orp in zip(roll_probs.values(), other_roll_probs.values()))
+        # Equality probabilities
+        # First transform to p[r <= dt] = 1 - p[r > dt], then p[r == dt] = p[r <= dt] - p[r <= dt - 1]
+        other_roll_probs = self.stats[roll_to_beat][prob_field].values()
+        reversed_probs = [1 - p for p in other_roll_probs]
+        equality_probs = [
+            reversed_probs[0], *(reversed_probs[s] - reversed_probs[s - 1] for s in range(1, len(other_roll_probs)))
+        ]
+        return sum(rp * orp for rp, orp in zip(roll_probs.values(), equality_probs))
