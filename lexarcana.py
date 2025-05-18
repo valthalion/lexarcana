@@ -47,6 +47,8 @@ st.sidebar.markdown(f"""
 
 # Plot probabilities of (selected) rolls
 
+st.markdown('## Probability Graph')
+
 prob_field = 'success_probs_fate' if fate else 'success_probs_no_fate'
 options = [roll.name for roll in rolls[dice_points]]
 y_max = max(prob for roll in options for prob in stats[roll][prob_field].values())
@@ -71,3 +73,16 @@ if selected:
     if len(selected) > 1:
        plt.legend(loc='upper right')
     st.pyplot(fig)
+
+# TODO: Use DataFrame for more control?
+st.markdown('## Probability Table')
+
+probs_table = []
+sep = '--'.join('|' for _ in range(len(DIFFICULTY_TARGETS) + 2))  # Roll + all elements in DIFFICULTY_TARGETS + ends
+probs_table.append(f'| Roll/DT | {" | ".join(str(dt) for dt in DIFFICULTY_TARGETS)} |')
+probs_table.append(sep)
+for roll in rolls[dice_points]:
+    probs = (f'{prob:.2%}' for prob in stats[roll.name][prob_field].values())
+    probs_table.append(f'| {roll.name} | {"|".join(probs)} |')
+st.markdown('\n'.join(probs_table))
+
