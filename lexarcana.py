@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import matplotlib.pyplot as plt
+import pandas as pd
 import streamlit as st
 
 from definitions import DIFFICULTY_TARGETS
@@ -77,12 +78,9 @@ if selected:
 # TODO: Use DataFrame for more control?
 st.markdown('## Probability Table')
 
-probs_table = []
-sep = '--'.join('|' for _ in range(len(DIFFICULTY_TARGETS) + 2))  # Roll + all elements in DIFFICULTY_TARGETS + ends
-probs_table.append(f'| Roll/DT | {" | ".join(str(dt) for dt in DIFFICULTY_TARGETS)} |')
-probs_table.append(sep)
-for roll in rolls[dice_points]:
-    probs = (f'{prob:.2%}' for prob in stats[roll.name][prob_field].values())
-    probs_table.append(f'| {roll.name} | {"|".join(probs)} |')
-st.markdown('\n'.join(probs_table))
-
+probs_table = pd.DataFrame(
+    [list(stats[roll.name][prob_field].values()) for roll in rolls[dice_points]],
+    columns=[f'DT{dt}' for dt in DIFFICULTY_TARGETS],
+    index=[roll.name for roll in rolls[dice_points]]
+)
+st.dataframe(probs_table.style.format('{:,.2%}'))
