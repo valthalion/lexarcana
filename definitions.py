@@ -15,7 +15,10 @@ if TYPE_CHECKING:
 DICE = (20, 12, 10, 8, 6, 5, 4, 3)
 
 # Difficulty Targets to use in the calculations
-DIFFICULTY_TARGETS = tuple(range(3, 22))  # 3, 4, ..., 21
+DIFFICULTY_TARGETS = tuple(range(22))  # 0, 1, 2, 3, 4, ..., 21
+
+# Difficulty Targets to use in the calculations
+DP_RANGE = tuple(range(3, 34))  # 3, 4, ..., 33
 
 # Maximum number of dice in a roll
 MAX_LEN = 3

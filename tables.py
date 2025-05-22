@@ -2,7 +2,7 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING
 
-from definitions import DIFFICULTY_TARGETS
+from definitions import DIFFICULTY_TARGETS, DP_RANGE
 from patterns import build_patterns
 from roll_selection import Chooser
 from rolls import Roll, RollStats
@@ -153,7 +153,7 @@ def best_to_csv(rolls: RollsTable, stats: StatsTable, filename: str) -> None:
 
 def main():
     # some tests
-    rolls = rolls_table(range(3, 21))
+    rolls = rolls_table(DP_RANGE)
     stats = stats_table(rolls)
 
     tables_to_csv(rolls, stats, 'stats.csv')
