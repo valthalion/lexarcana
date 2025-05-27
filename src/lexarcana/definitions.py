@@ -5,26 +5,8 @@ if TYPE_CHECKING:
     from collections import Counter
     from typing import Dict, List, Tuple, Union
 
-    from rolls import Roll
+    from .rolls import Roll
 
-
-###############################################################################
-# Configuration
-
-# Allowed die types; for pattern generation performance it's best to put them in decreasing order
-DICE = (20, 12, 10, 8, 6, 5, 4, 3)
-
-# Difficulty Targets to use in the calculations
-DIFFICULTY_TARGETS = tuple(range(22))  # 0, 1, 2, 3, 4, ..., 21
-
-# Difficulty Targets to use in the calculations
-DP_RANGE = tuple(range(3, 34))  # 3, 4, ..., 33
-
-# Maximum number of dice in a roll
-MAX_LEN = 3
-
-
-if TYPE_CHECKING:
     ###############################################################################
     # Types and Definitions
 

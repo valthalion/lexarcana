@@ -4,9 +4,9 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import streamlit as st
 
-from definitions import DIFFICULTY_TARGETS
-from roll_selection import Chooser
-from tables import tables_from_json
+from lexarcana.cfg import config
+from lexarcana.roll_selection import Chooser
+from lexarcana.tables import roll_stats_tables
 
 
 # Set page config
@@ -17,14 +17,14 @@ st.markdown('## :game_die: Roll Explorer')
 
 
 # Load data tables
-rolls, stats = tables_from_json('rolls.json', 'stats.json')
+rolls, stats = roll_stats_tables()
 chooser = Chooser(rolls, stats)
 
 
 # Set up roll parameters in sidebar
 min_dp, max_dp = min(rolls), max(rolls)
-min_diff, max_diff = min(DIFFICULTY_TARGETS), max(DIFFICULTY_TARGETS)
-diff_step = DIFFICULTY_TARGETS[1] - DIFFICULTY_TARGETS[0]
+min_diff, max_diff = min(config.difficulty_targets), max(config.difficulty_targets)
+diff_step = config.difficulty_targets[1] - config.difficulty_targets[0]
 
 st.sidebar.markdown("""# Roll Configuration""")
 fate = st.sidebar.checkbox('Fate', value=True)
@@ -37,6 +37,8 @@ if score_function == 'success_probability':
 elif score_function == 'beat_roll':
     roll_to_beat = st.sidebar.text_input('Roll to beat', value=rolls[dice_points][0].name)
     kwargs = {'roll_to_beat': roll_to_beat}
+else:
+    kwargs = {}
 
 best, prob = chooser.choose_best(score_function, dice_points=dice_points, fate=fate, **kwargs)
 st.sidebar.markdown(f"""
@@ -59,16 +61,16 @@ if len(options) <= 6:
 else:
     # If there is a large number of options, preselect only those that are optimal at some dt
     default_options = set()
-    for dt in DIFFICULTY_TARGETS:
+    for dt in config.difficulty_targets:
         prob, roll = max((stats[r.name][prob_field][dt], r.name) for r in rolls[dice_points])
         default_options.add(roll)
 selected = st.multiselect('Select rolls to display:', options, default=default_options)
 if selected:
     fig = plt.figure()
     for roll in selected:
-        plt.plot(DIFFICULTY_TARGETS, stats[roll][prob_field].values(), label=roll)
+        plt.plot(config.difficulty_targets, stats[roll][prob_field].values(), label=roll)
     plt.title(f'Probability curve @ Dice Points = {dice_points}')
-    plt.xticks(ticks=DIFFICULTY_TARGETS)
+    plt.xticks(ticks=config.difficulty_targets)
     plt.xlabel('Difficulty Target')
     plt.ylabel('Probability')
     plt.vlines(difficulty, 0, y_max, linestyles='dashed', colors='black')
@@ -76,12 +78,11 @@ if selected:
        plt.legend(loc='upper right')
     st.pyplot(fig)
 
-# TODO: Use DataFrame for more control?
 st.markdown('### Probability Table')
 
 probs_table = pd.DataFrame(
     [list(stats[roll.name][prob_field].values()) for roll in rolls[dice_points]],
-    columns=[f'DT{dt}' for dt in DIFFICULTY_TARGETS],
+    columns=[f'DT{dt}' for dt in config.difficulty_targets],
     index=[roll.name for roll in rolls[dice_points]]
 )
 st.dataframe(probs_table.style.format('{:,.2%}'))

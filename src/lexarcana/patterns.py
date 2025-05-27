@@ -1,12 +1,12 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
 
-from definitions import DICE, MAX_LEN
+from .cfg import config
 
 if TYPE_CHECKING:
     from typing import Iterable
 
-    from definitions import Array
+    from .definitions import Array
 
 
 __all__ = [
@@ -63,14 +63,14 @@ def build_patterns(target:int) -> Iterable[Array]:
     """
 
     # Filter dice too big to fit within the given target Dice Points
-    valid_values = tuple(value for value in DICE if value <= target)
+    valid_values = tuple(value for value in config.dice if value <= target)
     # As a heuristic, set the maximum gap to the value of the largest valid die
     max_gap = target - max(valid_values)
     # For DPs that exactly match a die, ensure that the next-smaller die can be used (if more than one is available)
     if not max_gap and len(valid_values) > 1:
         max_gap = target - sorted(valid_values)[-2]
     # Call the recursive function with these values, and deduplicate the result
-    yield from deduplicate(_build_patterns(valid_values, target=target, max_len=MAX_LEN, max_gap=max_gap))
+    yield from deduplicate(_build_patterns(valid_values, target=target, max_len=config.max_len, max_gap=max_gap))
 
 
 def deduplicate(patterns: Iterable[Array]) -> Iterable[Array]:

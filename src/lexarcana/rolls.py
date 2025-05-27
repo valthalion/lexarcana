@@ -4,10 +4,10 @@ from dataclasses import dataclass
 from itertools import product
 from typing import TYPE_CHECKING
 
-from definitions import DIFFICULTY_TARGETS
+from .cfg import config
 
 if TYPE_CHECKING:
-    from definitions import Array, RollCount, RollName, RollSpec, DataTable
+    from .definitions import Array, RollCount, RollName, RollSpec, DataTable
 
 
 __all__ = [
@@ -147,7 +147,7 @@ class RollStats:
 
         # Recursively calculate the probability of success: need a Fate roll AND then that the value of the additional roll
         # is enough to bridge the difference; the recursive call is needed because the new roll can also be a Fate roll and
-        # explode again. As additional rolls are included the target goes down and eventually the base case
+        # explode again. As additional rolls are included, the target goes down and eventually the base case
         # (fate_roll > target) is reached.
         return self.fate_probability * self.success_probability(target - self.fate_roll, fate)
 
@@ -180,29 +180,14 @@ class RollStats:
         roll_stats = {
             'success_probs_fate': {
                 difficulty_target: self.success_probability(target=difficulty_target, fate=True)
-                for difficulty_target in DIFFICULTY_TARGETS
+                for difficulty_target in config.difficulty_targets
             },
             'success_probs_no_fate': {
                 difficulty_target: self.success_probability(target=difficulty_target, fate=False)
-                for difficulty_target in DIFFICULTY_TARGETS
+                for difficulty_target in config.difficulty_targets
             },
             'fate_probability': self.fate_probability,
             'average_fate': self.average(fate=True),
             'average_no_fate': self.average(fate=False),
         }
         self._stats = roll_stats
-
-
-def main():
-    # Some basic tests: 1d6, 1d12, 2d6, 2d6+1d3
-
-    for array in [(6,), (12,), (6, 6), (6, 6, 3)]:
-        roll = Roll.from_array(array)
-        roll_stats = RollStats.from_roll(roll)
-        print(f'{array=}, spec = {roll.spec}, roll_counts = {roll_stats.rolls}, name = {roll.name}')
-        print(f'Success probability:\n\t@3 = {roll_stats.success_probability(3)};\n\t@6 = {roll_stats.success_probability(6)};\n\t@9 = {roll_stats.success_probability(9)}')
-        print(f'Average: {roll_stats.average(fate=False)} / {roll_stats.average(fate=True)}')
-
-
-if __name__ == '__main__':
-    main()

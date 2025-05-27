@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from typing import List, Tuple
 
-    from definitions import RollName, RollsTable, StatsTable
+    from .definitions import RollName, RollsTable, StatsTable
 
 
 __all__ = [
