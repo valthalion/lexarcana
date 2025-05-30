@@ -11,6 +11,7 @@ st.markdown('## :pencil: Character Creation')
 
 virtus = ['Coordinatio', 'Sensibilitas', 'Ingenium', 'Ratio', 'Auctoritas', 'Vigor']
 peritiae = ['De Natura', 'De Magia', 'De Scientia', 'De Societate', 'De Bello', 'De Corpore']
+
 provinces = {
     'Roma Urbe': {'De Bello': 1, 'De Corpore': 2, 'De Magia': 3, 'De Natura': 0, 'De Scientia': 6, 'De Societate': 6},
     'Italia': {'De Bello': 1, 'De Corpore': 3, 'De Magia': 3, 'De Natura': 3, 'De Scientia': 4, 'De Societate': 4},
@@ -33,6 +34,44 @@ provinces = {
     'Numidia': {'De Bello': 4, 'De Corpore': 3, 'De Magia': 1, 'De Natura': 5, 'De Scientia': 2, 'De Societate': 3},
     'Mauretania': {'De Bello': 3, 'De Corpore': 3, 'De Magia': 3, 'De Natura': 6, 'De Scientia': 1, 'De Societate': 2},
 }
+
+virtus_age_modifiers = {
+    'Young (16-30)': {'Coordinatio': 3, 'Sensibilitas': 3, 'Ingenium': 3, 'Ratio': 3, 'Auctoritas': 3, 'Vigor': 3},
+    'Adult (31-45)': {'Coordinatio': 2, 'Sensibilitas': 3, 'Ingenium': 3, 'Ratio': 4, 'Auctoritas': 4, 'Vigor': 2},
+    'Mature (46+)': {'Coordinatio': 1, 'Sensibilitas': 3, 'Ingenium': 3, 'Ratio': 5, 'Auctoritas': 5, 'Vigor': 1},
+}
+
+specialties = {
+    'De Bello': ['Axes and Maces', 'Bows', 'Castra', 'Daggers', 'Missiles', 'Swords', 'Spears', 'Tactics', 'Threaten'],
+    'De Corpore': ['Brawling', 'Carousing', 'Climbing', 'Jumping', 'Larceny', 'Marching', 'Running', 'Stealth', 'Swimming'],
+    'De Magia': ['Clairvoyance', 'Favor of the Gods', 'Forbidden Cults', 'Imperial Cults', 'Interpretation of Dreams',
+                 'Interpretation of Omens', 'Precognition', 'Retrocognition', 'Superstitions'],
+    'De Natura': ['Beast Lore', 'Exploration', 'Foraging', 'Herb Lore', 'Hunting', 'Navigation', 'Riding', 'Sailing', 'Weather'],
+    'De Scientia': ['Architecture', 'Crafts', 'Machinae', 'Decipher', 'Geography', 'History', 'Investigation', 'Medicine', 'Philosophy'],
+    'De Societate': ['Command', 'Deceit', 'Decorum', 'Negotiation', 'Oratory', 'Performance', 'Politics', 'Seduction', 'Streetwise'],
+}
+
+offices = {
+    'Assasin': 'De Corpore',
+    'Augur': 'De Magia',
+    'Diplomat': 'De Societate',
+    'Explorer': 'De Natura',
+    'Fighter': 'De Bello',
+    'Scholar': 'De Scientia',
+}
+
+office_modifiers = {
+    'Assasin': {'hp': 1, 'pietas': 1},
+    'Augur': {'hp': -1, 'pietas': 3},
+    'Diplomat': {'hp': 1, 'pietas': 1},
+    'Explorer': {'hp': 2, 'pietas': 0},
+    'Fighter': {'hp': 3, 'pietas': -1},
+    'Scholar': {'hp': 0, 'pietas': 2},
+}
+
+hp_and_pietas = {'hp': ['Coordinatio', 'Vigor'], 'pietas': ['Sensibilitas', 'Ratio']}
+
+errors = []  # No errors, add as they are encountered to process later
 
 
 st.markdown('### Determine Basic Virtutes')
@@ -104,5 +143,22 @@ with c1:
 with c2:
     for peritia, values in peritiae_values.items():
         explanation = ' | '.join(f'{origin}: {value}' for origin, value in values.items())
-        st.markdown(f'#### {peritia}: {sum(values.values())}')
+        peritia_value = sum(values.values())
+        if 3 <= peritia_value <= 18:  # Valid values, default formatting
+            st.markdown(f'#### {peritia}: {peritia_value}')
+        else:  # Invalid peritia value: set red background to highlight
+            st.markdown(f'#### :red-background[{peritia}: {peritia_value}]')
+            reason = 'Too low, must be at least 3' if peritia_value < 3 else f'Too high, must be at most 18'
+            error = f'{peritia}: {peritia_value} -> {reason}'
+            errors.append(error)
         st.markdown(explanation)
+
+if errors:
+    error_msg = '\n'.join(f'*    {error}' for error in errors)
+    st.error(f'### Invalid Peritiae values:\n\n{error_msg}')
+
+st.markdown('### Select Age')
+age = st.selectbox('Age', virtus_age_modifiers.keys(), label_visibility='collapsed')
+
+final_virtus = {v: basic + virtus_age_modifiers[age][v] for v, basic in basic_virtus.items()}
+st.write(age, final_virtus)
