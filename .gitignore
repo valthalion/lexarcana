@@ -151,7 +151,7 @@ dmypy.json
 .pytype/
 
 # Project specifics
-*.xlsx
-*.csv
+data/out/
+data/pcs/
 rolls.json
 stats.json
