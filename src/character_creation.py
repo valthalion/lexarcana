@@ -1,7 +1,28 @@
 from __future__ import annotations
+import json
+from pathlib import Path
 from random import randint
 
 import streamlit as st
+
+
+@st.dialog('Save Character')
+def save(character_info):
+    ready = False
+    filename = character_info['name'].lower().replace(' ', '_')
+    base_path = Path('data/pcs')
+    filename = st.text_input('Enter a filename', filename)
+    path = base_path / f'{filename}.json'
+    if path.exists():
+        st.markdown('File already exists.')
+        if st.checkbox('Overwrite it?'):
+            ready = True
+    else:
+        ready = True
+    if st.button('Save', disabled=not ready):
+        with open(path, 'w') as f:
+            json.dump(character_info, f)
+        st.rerun()
 
 # Set page config
 app_title = 'Lex Arcana'
@@ -315,3 +336,6 @@ character = {
     'pietas': pietas,
     'exp_multipliers': exp_multipliers,
 }
+
+if st.sidebar.button('Save Character'):
+    save(character)
