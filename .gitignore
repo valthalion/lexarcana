@@ -155,3 +155,4 @@ dmypy.json
 *.csv
 rolls.json
 stats.json
+.venv_win
