@@ -1,7 +1,28 @@
 from __future__ import annotations
+import json
+from pathlib import Path
 from random import randint
 
 import streamlit as st
+
+
+@st.dialog('Save Character')
+def save(character_info):
+    ready = False
+    filename = character_info['name'].lower().replace(' ', '_')
+    base_path = Path('data/pcs')
+    filename = st.text_input('Enter a filename', filename)
+    path = base_path / f'{filename}.json'
+    if path.exists():
+        st.markdown('File already exists.')
+        if st.checkbox('Overwrite it?'):
+            ready = True
+    else:
+        ready = True
+    if st.button('Save', disabled=not ready):
+        with open(path, 'w') as f:
+            json.dump(character_info, f)
+        st.rerun()
 
 # Set page config
 app_title = 'Lex Arcana'
@@ -11,6 +32,7 @@ st.markdown('## :pencil: Character Creation')
 
 virtus = ['Coordinatio', 'Sensibilitas', 'Ingenium', 'Ratio', 'Auctoritas', 'Vigor']
 peritiae = ['De Natura', 'De Magia', 'De Scientia', 'De Societate', 'De Bello', 'De Corpore']
+experience_fields = peritiae + ['Mos Arcanorum', 'Pax Deorum']
 
 provinces = {
     'Roma Urbe': {'De Bello': 1, 'De Corpore': 2, 'De Magia': 3, 'De Natura': 0, 'De Scientia': 6, 'De Societate': 6},
@@ -35,10 +57,10 @@ provinces = {
     'Mauretania': {'De Bello': 3, 'De Corpore': 3, 'De Magia': 3, 'De Natura': 6, 'De Scientia': 1, 'De Societate': 2},
 }
 
-virtus_age_modifiers = {
-    'Young (16-30)': {'Coordinatio': 3, 'Sensibilitas': 3, 'Ingenium': 3, 'Ratio': 3, 'Auctoritas': 3, 'Vigor': 3},
-    'Adult (31-45)': {'Coordinatio': 2, 'Sensibilitas': 3, 'Ingenium': 3, 'Ratio': 4, 'Auctoritas': 4, 'Vigor': 2},
-    'Mature (46+)': {'Coordinatio': 1, 'Sensibilitas': 3, 'Ingenium': 3, 'Ratio': 5, 'Auctoritas': 5, 'Vigor': 1},
+ages = {
+    'Young (16-30)': {'modifiers': {'Coordinatio': 3, 'Sensibilitas': 3, 'Ingenium': 3, 'Ratio': 3, 'Auctoritas': 3, 'Vigor': 3}, 'min': 16, 'max': 30},
+    'Adult (31-45)': {'modifiers': {'Coordinatio': 2, 'Sensibilitas': 3, 'Ingenium': 3, 'Ratio': 4, 'Auctoritas': 4, 'Vigor': 2}, 'min': 31, 'max': 45},
+    'Mature (46+)': {'modifiers': {'Coordinatio': 1, 'Sensibilitas': 3, 'Ingenium': 3, 'Ratio': 5, 'Auctoritas': 5, 'Vigor': 1}, 'min': 46, 'max': 99},
 }
 
 specialties = {
@@ -74,6 +96,26 @@ hp_and_pietas = {'hp': ['Coordinatio', 'Vigor'], 'pietas': ['Sensibilitas', 'Rat
 errors = []  # No errors, add as they are encountered to process later
 
 
+st.divider()
+
+
+st.markdown('### Personal Details')
+
+name = st.text_input('Name')
+col1, col2 = st.columns(2, gap='large', vertical_alignment='bottom')
+with col1:
+    age_value = st.number_input('Age (this will impact HP and Pietas)', min_value=16, max_value=99, step=1)
+with col2:
+    for age in ages:
+        if ages[age]['max'] >= age_value:
+            break
+    st.markdown(f'Age range: {age}')
+sex = st.radio('Sex', ['Male', 'Female'])
+
+
+st.divider()
+
+
 st.markdown('### Determine Basic Virtutes')
 
 st.markdown('Roll 2d6 for each virtus, click the button below for a random roll, or keep the standard array. You will assign the rolls later.')
@@ -98,15 +140,21 @@ virtus_rolls_fields = [
 virtus_rolls = tuple(sorted(virtus_rolls_fields, reverse=True))
 
 
+st.divider()
+
+
 st.markdown('### Assign the Scores')
 
 st.markdown('Choose a Virtus for each value')
-basic_virtus = {}
+basic_virtutes = {}
 for n, value in enumerate(virtus_rolls):
     c1, c2 = st.columns([1, 9])
     c1.markdown(f'{value}:')
-    virt = c2.selectbox(f'{value}', [v for v in virtus if v not in basic_virtus], key=f'virtus{n}', label_visibility='collapsed')
-    basic_virtus[virt] = value
+    virt = c2.selectbox(f'{value}', [v for v in virtus if v not in basic_virtutes], key=f'virtus{n}', label_visibility='collapsed')
+    basic_virtutes[virt] = value
+
+
+st.divider()
 
 
 st.markdown('### Chose Province')
@@ -114,6 +162,10 @@ st.markdown('### Chose Province')
 st.markdown('Each province will provide different Peritiae modifiers')
 province = st.selectbox('Province', provinces.keys())
 province_modifiers = provinces[province]
+
+
+st.divider()
+
 
 st.markdown('### Determine Peritiae')
 
@@ -129,18 +181,18 @@ contributions = {
 
 peritiae_values = {peritia: {province: province_modifiers[peritia]} for peritia in peritiae}
 
-c1, c2 = st.columns(2, border=True)
+col1, col2 = st.columns(2, border=True)
 
-with c1:
+with col1:
     for virt, (peritia1, peritia2) in contributions.items():
         st.markdown(f'<center>{peritia1} <-  {virt} -> {peritia2}</center>', unsafe_allow_html=True)
-        split2 = st.slider(virt, 0, basic_virtus[virt], 1, label_visibility='collapsed')
-        split1 = basic_virtus[virt] - split2
+        split2 = st.slider(virt, 0, basic_virtutes[virt], 1, label_visibility='collapsed')
+        split1 = basic_virtutes[virt] - split2
         peritiae_values[peritia1][virt] = split1
         peritiae_values[peritia2][virt] = split2
 
 
-with c2:
+with col2:
     for peritia, values in peritiae_values.items():
         explanation = ' | '.join(f'{origin}: {value}' for origin, value in values.items())
         peritia_value = sum(values.values())
@@ -153,12 +205,137 @@ with c2:
             errors.append(error)
         st.markdown(explanation)
 
+final_peritiae = {peritia: sum(values.values()) for peritia, values in peritiae_values.items()}
+if not any(value >= 15 for value in final_peritiae.values()):
+    errors.append('At least one Peritia value must be 15 or more to qualify for an office')
+
 if errors:
     error_msg = '\n'.join(f'*    {error}' for error in errors)
     st.error(f'### Invalid Peritiae values:\n\n{error_msg}')
+    st.stop()
 
-st.markdown('### Select Age')
-age = st.selectbox('Age', virtus_age_modifiers.keys(), label_visibility='collapsed')
+final_virtutes = {v: basic + ages[age]['modifiers'][v] for v, basic in basic_virtutes.items()}
 
-final_virtus = {v: basic + virtus_age_modifiers[age][v] for v, basic in basic_virtus.items()}
-st.write(age, final_virtus)
+
+st.divider()
+
+
+st.markdown('### Choose Background Specialties')
+chosen_specialties = {}
+
+st.markdown('Select a specialty with a rating of +2')
+col1, col2 = st.columns(2)
+with col1:
+    peritia = st.selectbox('Peritia', specialties.keys(), key='sp_2_per')
+with col2:
+    specialty = st.selectbox('Specialty', specialties[peritia], key='sp_2_sp')
+    chosen_specialties[specialty] = 2
+
+st.markdown('Select a specialty with a rating of +1')
+col1, col2 = st.columns(2)
+with col1:
+    peritia = st.selectbox('Peritia', specialties.keys(), key='sp_1_1_per')
+with col2:
+    specialty = st.selectbox('Specialty', [specialty for specialty in specialties[peritia] if specialty not in chosen_specialties], key='sp_1_1_sp')
+    chosen_specialties[specialty] = 1
+
+st.markdown('Select a specialty with a rating of +1')
+col1, col2 = st.columns(2)
+with col1:
+    peritia = st.selectbox('Peritia', specialties.keys(), key='sp_1_2_per')
+with col2:
+    specialty = st.selectbox('Specialty', [specialty for specialty in specialties[peritia] if specialty not in chosen_specialties], key='sp_1_2_sp')
+    chosen_specialties[specialty] = 1
+
+
+
+st.divider()
+
+
+st.markdown('### Choose Office')
+office = st.selectbox('Office', [office for office in offices if final_peritiae[offices[office]] >= 15])
+
+st.markdown('### Tirocinium')
+st.markdown('Select two new specialties at +1 from the Peritia associated to the Office')
+peritia = offices[office]
+
+col1, col2 = st.columns(2)
+with col1:
+    specialty = st.selectbox('Specialty', [specialty for specialty in specialties[peritia] if specialty not in chosen_specialties], key='sp_1_3_sp')
+    chosen_specialties[specialty] = 1
+with col2:
+    specialty = st.selectbox('Specialty', [specialty for specialty in specialties[peritia] if specialty not in chosen_specialties], key='sp_1_4_sp')
+    chosen_specialties[specialty] = 1
+
+hp = sum(final_virtutes[virt] for virt in hp_and_pietas['hp']) + office_modifiers[office]['hp']
+pietas = sum(final_virtutes[virt] for virt in hp_and_pietas['pietas']) + office_modifiers[office]['pietas']
+
+
+st.divider()
+
+
+st.markdown('### Experience Multipliers')
+
+st.markdown(f'''
+    Select experience multipliers. Each must be between 2 and 10, and the highest one (ties allowed) should correspond
+    to the Peritia associated to the Office ({offices[office]}). A total of 24 points should be allocated.
+''')
+exp_multipliers = {}
+for field in experience_fields:
+    col1, col2, col3 = st.columns([3, 5, 2], vertical_alignment='center', gap='medium')
+    with col1:
+        st.markdown(f'#### {field}')
+    with col2:
+        multiplier = st.slider(field, min_value=2, max_value=10, step=1, key=f'xpmultiplier_{field}', label_visibility='hidden')
+        exp_multipliers[field] = multiplier
+    with col3:
+        st.markdown(f'#### {multiplier}')
+    exp_multipliers[field] = multiplier
+allocated = sum(exp_multipliers.values())
+st.markdown(f'#### :red-background[Allocated: {allocated}]' if allocated > 24 else f'#### Allocated: {allocated}')
+if allocated > 24:
+    errors.append(f'Too many points allocated ({allocated})')
+if any(value > exp_multipliers[offices[office]] for value in exp_multipliers.values()):
+    errors.append(f'Multiplier for {offices[office]} is not the highest')
+
+if errors:
+    error_msg = '\n'.join(f'*    {error}' for error in errors)
+    st.error(f'### Invalid Experience Multipliers allocation:\n\n{error_msg}')
+    st.stop()
+
+
+st.divider()
+
+
+st.markdown('### Hit Points and Pietas')
+
+col1, col2 = st.columns(2)
+with col1:
+    st.markdown(f'#### Hit Points: {hp}')
+    contributors = hp_and_pietas['hp'] + [office]
+    contributions = [final_virtutes[virt] for virt in contributors[:2]] + [office_modifiers[office]['hp']]
+    st.markdown(' | '.join(f'{contributor}: {contribution}' for contributor, contribution in zip(contributors, contributions)))
+with col2:
+    st.markdown(f'#### Pietas: {pietas}')
+    contributors = hp_and_pietas['pietas'] + [office]
+    contributions = [final_virtutes[virt] for virt in contributors[:2]] + [office_modifiers[office]['pietas']]
+    st.markdown(' | '.join(f'{contributor}: {contribution}' for contributor, contribution in zip(contributors, contributions)))
+
+
+character = {
+    'name': name,
+    'age': age_value,
+    'sex': sex,
+    'province': province,
+    'office': office,
+    'rank': 'Gregarius',  # Starting rank
+    'virtutes': final_virtutes,
+    'peritiae': final_peritiae,
+    'specialties': chosen_specialties,
+    'hp': hp,
+    'pietas': pietas,
+    'exp_multipliers': exp_multipliers,
+}
+
+if st.sidebar.button('Save Character'):
+    save(character)
